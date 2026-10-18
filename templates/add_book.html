@@ -8,13 +8,11 @@
     <div>
         <a class="back-link" href="{{ url_for('index') }}">{{ ui.icon("arrow-left", 16) }} Back to dashboard</a>
         <h1>Add a New Book</h1>
-        <p class="subtitle">Give a new book a cosy spot on the shelf. Fields marked <span class="required">*</span> are required.</p>
+        <p class="subtitle">Fields marked <span class="required">*</span> are required.</p>
     </div>
 </div>
 
 <section class="card form-card">
-    <img class="peek-bunny" src="{{ url_for('static', filename='img/bunny-logo.svg') }}"
-         width="64" height="64" alt="">
     {% if errors %}
         <div class="alert alert-error" role="alert">
             {{ ui.icon("alert", 20) }}

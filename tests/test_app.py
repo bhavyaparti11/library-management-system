@@ -251,7 +251,7 @@ def test_dashboard_shows_recently_added_books(client):
     add_book(client)
     add_book(client, title="Docker in Practice", author="Ian Miell", isbn="9781617297809")
     html = client.get("/").get_data(as_text=True)
-    assert "Freshly added" in html
+    assert "Recently added" in html
     # Newest book first
     assert html.index("<strong>Docker in Practice</strong>") < html.index(
         "<strong>Test Driven Development</strong>"
@@ -260,14 +260,13 @@ def test_dashboard_shows_recently_added_books(client):
 
 def test_recently_added_is_hidden_while_searching(client):
     add_book(client)
-    assert b"Freshly added" not in client.get("/?q=test").data
+    assert b"Recently added" not in client.get("/?q=test").data
 
 
-def test_bunny_images_are_served(client):
+def test_logo_is_served(client):
     html = client.get("/").get_data(as_text=True)
-    for name in ("bunny-logo.svg", "bunny-companion.svg", "bunny-reading.svg"):
-        assert f"img/{name}" in html
-        response = client.get(f"/static/img/{name}")
-        assert response.status_code == 200
-        assert b"<svg" in response.data
-        response.close()
+    assert "img/logo.svg" in html
+    response = client.get("/static/img/logo.svg")
+    assert response.status_code == 200
+    assert b"<svg" in response.data
+    response.close()

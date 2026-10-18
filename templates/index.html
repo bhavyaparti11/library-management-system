@@ -2,52 +2,47 @@
 {% import "macros.html" as ui %}
 
 {% block content %}
-<section class="hero">
-    <div class="hero-text">
-        <p class="eyebrow">{{ ui.icon("sparkle", 13) }} Bunny Library dashboard</p>
-        <h1>Welcome to your little library!</h1>
-        <p class="subtitle">A cosy little home for all your favourite books.</p>
-        <div class="hero-actions">
-            <a class="button" href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add Book</a>
-            <a class="button button-secondary" href="#catalogue">{{ ui.icon("book") }} Browse catalogue</a>
-        </div>
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Overview</p>
+        <h1>Library Dashboard</h1>
+        <p class="subtitle">Live figures and catalogue from the library database.</p>
     </div>
-    <img class="hero-bunny" src="{{ url_for('static', filename='img/bunny-reading.svg') }}"
-         width="190" height="190" alt="">
-</section>
+    <a class="button" href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add Book</a>
+</div>
 
 {% set loan_rate = ((stats.issued * 100) / stats.total)|round|int if stats.total else 0 %}
 <section class="stats" aria-label="Library statistics">
     <a class="stat-card" href="{{ url_for('index') }}#catalogue">
-        <span class="stat-icon tone-pink">{{ ui.icon("book", 22) }}</span>
-        <span class="stat-body">
+        <span class="stat-top">
             <span class="stat-label">Total books</span>
-            <span class="stat-number">{{ stats.total }}</span>
-            <span class="stat-note">{{ ui.icon("layers", 13) }} {{ stats.genres }} genre{{ "" if stats.genres == 1 else "s" }}</span>
+            <span class="stat-icon">{{ ui.icon("book", 18) }}</span>
         </span>
+        <span class="stat-number">{{ stats.total }}</span>
+        <span class="stat-note">{{ ui.icon("layers", 13) }} {{ stats.genres }} genre{{ "" if stats.genres == 1 else "s" }}</span>
     </a>
     <a class="stat-card" href="{{ url_for('index', status='available') }}#catalogue">
-        <span class="stat-icon tone-rose">{{ ui.icon("heart", 22) }}</span>
-        <span class="stat-body">
+        <span class="stat-top">
             <span class="stat-label">Available</span>
-            <span class="stat-number">{{ stats.available }}</span>
-            <span class="stat-note">On the shelf, ready to issue</span>
+            <span class="stat-icon">{{ ui.icon("check", 18) }}</span>
         </span>
+        <span class="stat-number">{{ stats.available }}</span>
+        <span class="stat-note">On the shelf, ready to issue</span>
     </a>
     <a class="stat-card" href="{{ url_for('index', status='issued') }}#catalogue">
-        <span class="stat-icon tone-lilac">{{ ui.icon("loan", 22) }}</span>
-        <span class="stat-body">
+        <span class="stat-top">
             <span class="stat-label">On loan</span>
-            <span class="stat-number">{{ stats.issued }}</span>
-            <span class="stat-note">{{ loan_rate }}% of the collection</span>
-            <span class="progress" aria-hidden="true"><span style="width: {{ loan_rate }}%"></span></span>
+            <span class="stat-icon">{{ ui.icon("loan", 18) }}</span>
         </span>
+        <span class="stat-number">{{ stats.issued }}</span>
+        <span class="stat-note">{{ loan_rate }}% of the collection</span>
+        <span class="progress" aria-hidden="true"><span style="width: {{ loan_rate }}%"></span></span>
     </a>
 </section>
 
 {% if recent and not query and status == "all" %}
 <section class="recent" aria-label="Recently added books">
-    <h2 class="section-title">{{ ui.icon("sparkle", 16) }} Freshly added</h2>
+    <h2 class="section-title">Recently added</h2>
     <div class="recent-row">
         {% for book in recent %}
             <a class="recent-card" href="{{ url_for('book_detail', book_id=book.id) }}">
@@ -66,7 +61,7 @@
 <section class="card" id="catalogue">
     <div class="card-header">
         <div>
-            <h2>{{ ui.icon("book", 20) }} Book Catalogue</h2>
+            <h2>Book Catalogue</h2>
             <p class="muted">Showing {{ books|length }} of {{ stats.total }} book{{ "" if stats.total == 1 else "s" }}</p>
         </div>
     </div>
@@ -79,7 +74,7 @@
                        placeholder="Search by title, author or ISBN" aria-label="Search books">
             </label>
             <input type="hidden" name="status" value="{{ status }}">
-            <button type="submit" class="button">{{ ui.icon("search", 16) }} Search</button>
+            <button type="submit" class="button">Search</button>
         </form>
 
         <nav class="segmented" aria-label="Filter by status">
@@ -99,43 +94,59 @@
     </div>
 
     {% if books %}
-        <ul class="book-grid">
-            {% for book in books %}
-                <li class="book-card">
-                    <div class="book-card-top">
-                        <span class="cover" style="--hue: {{ book.title|cover_hue }}">{{ book.title[:1]|upper }}</span>
-                        <div class="book-card-heading">
-                            <a class="book-title" href="{{ url_for('book_detail', book_id=book.id) }}">{{ book.title }}</a>
-                            <span class="book-author">by {{ book.author }}</span>
-                        </div>
-                    </div>
-                    <dl class="book-meta">
-                        <div><dt>ISBN</dt><dd class="mono">{{ book.isbn }}</dd></div>
-                        <div><dt>Genre</dt><dd>{{ book.genre or "-" }}</dd></div>
-                        <div><dt>Year</dt><dd>{{ book.published_year or "-" }}</dd></div>
-                    </dl>
-                    <div class="book-card-footer">
-                        <span class="badge badge-{{ book.status }}">{{ book.status }}</span>
-                        <a class="link-arrow" href="{{ url_for('book_detail', book_id=book.id) }}"
-                           aria-label="View details for {{ book.title }}">
-                            View details {{ ui.icon("chevron", 16) }}
-                        </a>
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
+        <div class="table-wrap">
+            <table class="book-table">
+                <thead>
+                    <tr>
+                        <th>Book</th>
+                        <th>ISBN</th>
+                        <th>Genre</th>
+                        <th>Year</th>
+                        <th>Status</th>
+                        <th><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                        <tr>
+                            <td data-label="Book">
+                                <div class="book-cell">
+                                    <span class="cover" style="--hue: {{ book.title|cover_hue }}">{{ book.title[:1]|upper }}</span>
+                                    <span>
+                                        <a class="book-title" href="{{ url_for('book_detail', book_id=book.id) }}">{{ book.title }}</a>
+                                        <span class="book-author">{{ book.author }}</span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-label="ISBN" class="mono">{{ book.isbn }}</td>
+                            <td data-label="Genre">{{ book.genre or "-" }}</td>
+                            <td data-label="Year">{{ book.published_year or "-" }}</td>
+                            <td data-label="Status">
+                                <span class="badge badge-{{ book.status }}">{{ book.status }}</span>
+                            </td>
+                            <td class="row-action">
+                                <a class="link-arrow" href="{{ url_for('book_detail', book_id=book.id) }}"
+                                   aria-label="View details for {{ book.title }}">
+                                    View {{ ui.icon("chevron", 16) }}
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% elif stats.total == 0 %}
         <div class="empty-state">
-            <img src="{{ url_for('static', filename='img/bunny-reading.svg') }}" width="130" height="130" alt="">
+            <span class="empty-icon">{{ ui.icon("book", 26) }}</span>
             <h3>No books in the library yet</h3>
-            <p>The bunny is ready to read! Add your first book to start the catalogue.</p>
+            <p>Add your first book to start building the catalogue.</p>
             <a class="button" href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add your first book</a>
         </div>
     {% else %}
         <div class="empty-state">
-            <img src="{{ url_for('static', filename='img/bunny-search.svg') }}" width="130" height="130" alt="">
+            <span class="empty-icon">{{ ui.icon("search", 26) }}</span>
             <h3>No books match {% if query %}"{{ query }}"{% else %}this filter{% endif %}</h3>
-            <p>The bunny looked everywhere! Try a different title, author or ISBN, or clear the filters.</p>
+            <p>Try a different title, author or ISBN, or clear the filters.</p>
             <a class="button button-secondary" href="{{ url_for('index') }}#catalogue">Clear filters</a>
         </div>
     {% endif %}

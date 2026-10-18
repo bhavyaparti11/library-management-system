@@ -122,7 +122,7 @@ anywhere, so there is nothing to add under *Settings > Secrets*.
 | # | Show | Do this |
 |---|------|---------|
 | 1 | Redesigned site | `.\scripts\dev.ps1`, open http://localhost:5000. Show the dashboard cards, filters, search, a book page, issue + return, the 404 page (`/books/9999`). Sidebar says **dev (live code)**. |
-| 2 | Code change | In VS Code, edit `templates/index.html`: change `<h1>Welcome to your little library!</h1>` to `<h1>Welcome to our college library!</h1>`. Or in `static/style.css` change `--rose-500: #C25A84;` to `--rose-500: #8E5DA8;` (buttons turn lilac). Save. |
+| 2 | Code change | In VS Code, edit `templates/index.html`: change `<h1>Library Dashboard</h1>` to `<h1>College Library Dashboard</h1>`. Or in `static/style.css` change `--rose-600: #B84F78;` to `--rose-600: #6E4A63;` (buttons turn plum). Save. |
 | 3 | Instant update | Refresh the browser: the change appears. **No image rebuild.** |
 | 4 | Push | `.\scripts\dev.ps1 -Stop`, then `pytest`, then `git add .`, `git commit -m "Demo change"`, `git push`. Open the **Actions** tab. |
 | 5 | Tests pass | Click the run: job **Run automated tests** goes green (23 tests). |

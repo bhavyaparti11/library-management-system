@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Library logo">
+  <!-- Library logo: an open book on a rose-pink tile -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E88EAD"/>
+      <stop offset="1" stop-color="#B84F78"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#tile)"/>
+  <g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 16.5c-2.6-2.1-6.4-3-10.5-3v18c4.1 0 7.9.9 10.5 3 2.6-2.1 6.4-3 10.5-3v-18c-4.1 0-7.9.9-10.5 3z"/>
+    <path d="M24 16.5v18"/>
+  </g>
+</svg>

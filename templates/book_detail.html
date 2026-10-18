@@ -7,7 +7,7 @@
 <div class="page-header">
     <div>
         <a class="back-link" href="{{ url_for('index') }}">{{ ui.icon("arrow-left", 16) }} Back to dashboard</a>
-        <p class="eyebrow">{{ ui.icon("sparkle", 13) }} Book details</p>
+        <p class="eyebrow">Book details</p>
     </div>
 </div>
 
@@ -52,7 +52,7 @@
 
     <aside class="side-stack">
         <section class="card">
-            <h2>{{ ui.icon("heart", 18) }} Circulation</h2>
+            <h2>Circulation</h2>
             {% if book.status == "available" %}
                 <p class="muted">This book is on the shelf and can be issued to a borrower.</p>
                 <form method="post" class="stack-form"
