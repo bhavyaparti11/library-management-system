@@ -1,32 +1,83 @@
+{% import "macros.html" as ui %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Library Management System -Demo {% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>{% block title %}Dashboard{% endblock %} - Library Management System</title>
+    {# ?v=<version> makes the browser download fresh CSS/JS for every new image version #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ app_version|urlencode }}">
+    <script src="{{ url_for('static', filename='app.js') }}?v={{ app_version|urlencode }}" defer></script>
 </head>
 <body>
-    <header class="navbar">
-        <a class="brand" href="{{ url_for('index') }}">Library Management System</a>
-        <nav>
-            <a href="{{ url_for('index') }}">All Books</a>
-            <a href="{{ url_for('add_book') }}">Add Book</a>
-        </nav>
-    </header>
+{% set active_filter = status if status is defined else none %}
+<div class="layout">
+    <aside class="sidebar" id="sidebar">
+        <a class="brand" href="{{ url_for('index') }}">
+            <span class="brand-logo">{{ ui.icon("book", 22) }}</span>
+            <span class="brand-text">
+                <strong>Library</strong>
+                <small>Management System</small>
+            </span>
+        </a>
 
-    <main class="container">
+        <nav class="nav" aria-label="Main navigation">
+            <p class="nav-label">Library</p>
+            <a class="nav-link{% if request.endpoint == 'index' and active_filter not in ('available', 'issued') %} active{% endif %}"
+               href="{{ url_for('index') }}">{{ ui.icon("dashboard") }} Dashboard</a>
+            <a class="nav-link{% if active_filter == 'available' %} active{% endif %}"
+               href="{{ url_for('index', status='available') }}#catalogue">{{ ui.icon("check") }} Available books</a>
+            <a class="nav-link{% if active_filter == 'issued' %} active{% endif %}"
+               href="{{ url_for('index', status='issued') }}#catalogue">{{ ui.icon("loan") }} Books on loan</a>
+            <a class="nav-link{% if request.endpoint == 'add_book' %} active{% endif %}"
+               href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add book</a>
+
+            <p class="nav-label">System</p>
+            <a class="nav-link" href="{{ url_for('api_books') }}">{{ ui.icon("code") }} JSON API</a>
+            <a class="nav-link" href="{{ url_for('health') }}">{{ ui.icon("pulse") }} Health check</a>
+        </nav>
+
+        <div class="version-card" title="The version of the code this container is running">
+            <span class="version-label">{{ ui.icon("box", 14) }} Running version</span>
+            <code>{{ app_version }}</code>
+            {% if build_date %}<small>Built {{ build_date }}</small>{% endif %}
+        </div>
+    </aside>
+    <div class="sidebar-backdrop" data-toggle-sidebar></div>
+
+    <div class="main">
+        <header class="topbar">
+            <button type="button" class="icon-button" data-toggle-sidebar
+                    aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">
+                {{ ui.icon("menu", 20) }}
+            </button>
+            <a class="topbar-brand" href="{{ url_for('index') }}">Library Management System</a>
+        </header>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
+            {% if messages %}
+                <div class="toast-stack" aria-live="polite">
+                    {% for category, message in messages %}
+                        <div class="toast toast-{{ category }}" role="status">
+                            {{ ui.icon("check" if category == "success" else "alert", 20) }}
+                            <p>{{ message }}</p>
+                            <button type="button" class="toast-close" data-dismiss
+                                    aria-label="Dismiss notification">{{ ui.icon("close", 16) }}</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
         {% endwith %}
 
-        {% block content %}{% endblock %}
-    </main>
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
 
-    <footer class="footer">
-        Flask + SQLite application packaged with Docker and tested with GitHub Actions -Demo
-    </footer>
+        <footer class="footer">
+            <span>Library Management System &middot; Flask + SQLite</span>
+            <span>Packaged with Docker &middot; Tested by GitHub Actions &middot; Version {{ app_version }}</span>
+        </footer>
+    </div>
+</div>
 </body>
 </html>

@@ -1,52 +1,93 @@
 {% extends "base.html" %}
+{% import "macros.html" as ui %}
 
-{% block title %}{{ book.title }} - Library Management System{% endblock %}
+{% block title %}{{ book.title }}{% endblock %}
 
 {% block content %}
-<section class="card narrow">
-    <h1>{{ book.title }}</h1>
-
-    <dl class="details">
-        <dt>Author</dt>
-        <dd>{{ book.author }}</dd>
-        <dt>ISBN</dt>
-        <dd>{{ book.isbn }}</dd>
-        <dt>Published Year</dt>
-        <dd>{{ book.published_year or "Not specified" }}</dd>
-        <dt>Genre</dt>
-        <dd>{{ book.genre or "Not specified" }}</dd>
-        <dt>Status</dt>
-        <dd><span class="badge badge-{{ book.status }}">{{ book.status }}</span></dd>
-        {% if book.status == "issued" %}
-            <dt>Issued To</dt>
-            <dd>{{ book.borrower }}</dd>
-        {% endif %}
-        <dt>Added On</dt>
-        <dd>{{ book.created_at }}</dd>
-    </dl>
-
-    <div class="actions">
-        {% if book.status == "available" %}
-            <form method="post" class="inline-form"
-                  action="{{ url_for('issue_book', book_id=book.id) }}">
-                <input type="text" name="borrower" maxlength="100" required
-                       placeholder="Borrower name">
-                <button type="submit" class="button">Issue Book</button>
-            </form>
-        {% else %}
-            <form method="post" class="inline-form"
-                  action="{{ url_for('return_book', book_id=book.id) }}">
-                <button type="submit" class="button">Mark as Returned</button>
-            </form>
-        {% endif %}
-
-        <form method="post" class="inline-form"
-              action="{{ url_for('delete_book', book_id=book.id) }}"
-              onsubmit="return confirm('Delete this book permanently?');">
-            <button type="submit" class="button button-danger">Delete Book</button>
-        </form>
+<div class="page-header">
+    <div>
+        <a class="back-link" href="{{ url_for('index') }}">{{ ui.icon("arrow-left", 16) }} Back to dashboard</a>
+        <p class="eyebrow">Book details</p>
     </div>
+</div>
 
-    <p><a href="{{ url_for('index') }}">&larr; Back to all books</a></p>
-</section>
+<div class="detail-grid">
+    <section class="card book-hero">
+        <div class="hero-top">
+            <span class="cover cover-lg" style="--hue: {{ book.title|cover_hue }}">{{ book.title[:1]|upper }}</span>
+            <div>
+                <h1>{{ book.title }}</h1>
+                <p class="byline">by {{ book.author }}</p>
+                <span class="badge badge-{{ book.status }}">{{ book.status }}</span>
+            </div>
+        </div>
+
+        <dl class="meta-grid">
+            <div>
+                <dt>ISBN</dt>
+                <dd class="mono">{{ book.isbn }}</dd>
+            </div>
+            <div>
+                <dt>Published Year</dt>
+                <dd>{{ book.published_year or "Not specified" }}</dd>
+            </div>
+            <div>
+                <dt>Genre</dt>
+                <dd>{{ book.genre or "Not specified" }}</dd>
+            </div>
+            <div>
+                <dt>Added On</dt>
+                <dd>{{ book.created_at }}</dd>
+            </div>
+            <div>
+                <dt>Status</dt>
+                <dd>{{ "On loan" if book.status == "issued" else "Available" }}</dd>
+            </div>
+            <div>
+                <dt>Issued To</dt>
+                <dd>{{ book.borrower if book.status == "issued" else "-" }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <aside class="side-stack">
+        <section class="card">
+            <h2>Circulation</h2>
+            {% if book.status == "available" %}
+                <p class="muted">This book is on the shelf and can be issued to a borrower.</p>
+                <form method="post" class="stack-form"
+                      action="{{ url_for('issue_book', book_id=book.id) }}">
+                    <label for="borrower">Borrower name</label>
+                    <input type="text" id="borrower" name="borrower" maxlength="100" required
+                           placeholder="e.g. Asha Verma">
+                    <button type="submit" class="button button-block">
+                        {{ ui.icon("arrow-right") }} Issue Book
+                    </button>
+                </form>
+            {% else %}
+                <div class="loan-box">
+                    {{ ui.icon("loan", 20) }}
+                    <span>Currently on loan to <strong>{{ book.borrower }}</strong></span>
+                </div>
+                <form method="post" class="stack-form"
+                      action="{{ url_for('return_book', book_id=book.id) }}">
+                    <button type="submit" class="button button-teal button-block">
+                        {{ ui.icon("return") }} Mark as Returned
+                    </button>
+                </form>
+            {% endif %}
+        </section>
+
+        <section class="card danger-zone">
+            <h2>Remove book</h2>
+            <p class="muted">Permanently delete this book from the catalogue. This cannot be undone.</p>
+            <form method="post" action="{{ url_for('delete_book', book_id=book.id) }}"
+                  data-confirm="Delete &quot;{{ book.title }}&quot; permanently?">
+                <button type="submit" class="button button-danger button-block">
+                    {{ ui.icon("trash") }} Delete Book
+                </button>
+            </form>
+        </section>
+    </aside>
+</div>
 {% endblock %}

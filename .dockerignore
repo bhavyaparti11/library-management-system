@@ -12,3 +12,5 @@ tests/
 .vscode/
 .idea/
 README.md
+compose.yaml
+scripts/

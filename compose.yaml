@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------
+# DEVELOPMENT setup for the Library Management System
+#
+# Start it with:   .\scripts\dev.ps1        (or: docker compose up --build -d)
+# Stop it with:    .\scripts\dev.ps1 -Stop  (or: docker compose down)
+#
+# Your app.py, templates/ and static/ folders are MOUNTED into the
+# container (a "bind mount"), and Flask runs with auto-reload. Save a file
+# in VS Code, refresh http://localhost:5000, and you see the change.
+# No image rebuild needed.
+#
+# This is only for development. The tested, versioned image that GitHub
+# Actions builds and publishes is run with .\scripts\update-local.ps1
+# ---------------------------------------------------------------
+
+name: library-dev
+
+services:
+  web:
+    build: .
+    image: library-app:dev
+    container_name: library-dev
+    # Flask's development server with auto-reload instead of Gunicorn
+    command: ["flask", "--app", "app", "run", "--host", "0.0.0.0", "--port", "5000", "--debug"]
+    environment:
+      APP_VERSION: "dev (live code)"
+    ports:
+      # 127.0.0.1 = reachable only from this laptop, never from the network
+      - "127.0.0.1:5000:5000"
+    volumes:
+      # Live code from your project folder (read-only inside the container)
+      - ./app.py:/app/app.py:ro
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro
+      # The same persistent database volume used by the normal container
+      - library-data:/app/data
+
+volumes:
+  library-data:
+    # Use the existing "library-data" volume. Compose will never delete it.
+    external: true

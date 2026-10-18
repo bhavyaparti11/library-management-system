@@ -1,46 +1,46 @@
 {% extends "base.html" %}
+{% import "macros.html" as ui %}
 
-{% block title %}Add Book - Library Management System{% endblock %}
+{% block title %}Add Book{% endblock %}
 
 {% block content %}
-<section class="card narrow">
-    <h1>Add a New Book</h1>
+<div class="page-header">
+    <div>
+        <a class="back-link" href="{{ url_for('index') }}">{{ ui.icon("arrow-left", 16) }} Back to dashboard</a>
+        <h1>Add a New Book</h1>
+        <p class="subtitle">Fields marked <span class="required">*</span> are required.</p>
+    </div>
+</div>
 
+<section class="card form-card">
     {% if errors %}
-        <div class="alert alert-error">
-            <strong>Please fix the following:</strong>
-            <ul>
-                {% for error in errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
+        <div class="alert alert-error" role="alert">
+            {{ ui.icon("alert", 20) }}
+            <div>
+                <strong>The book was not saved.</strong>
+                Please fix the {{ errors|length }} highlighted field{{ "" if errors|length == 1 else "s" }} below.
+            </div>
         </div>
     {% endif %}
 
     <form method="post" action="{{ url_for('add_book') }}" class="form">
-        <label for="title">Title *</label>
-        <input type="text" id="title" name="title" maxlength="200" required
-               value="{{ form.get('title', '') }}">
-
-        <label for="author">Author *</label>
-        <input type="text" id="author" name="author" maxlength="100" required
-               value="{{ form.get('author', '') }}">
-
-        <label for="isbn">ISBN (10 or 13 digits) *</label>
-        <input type="text" id="isbn" name="isbn" maxlength="17" required
-               value="{{ form.get('isbn', '') }}" placeholder="e.g. 978-0132350884">
-
-        <label for="published_year">Published Year</label>
-        <input type="number" id="published_year" name="published_year" min="1000"
-               value="{{ form.get('published_year', '') }}">
-
-        <label for="genre">Genre</label>
-        <input type="text" id="genre" name="genre" maxlength="50"
-               value="{{ form.get('genre', '') }}">
+        <div class="form-grid">
+            {{ ui.field("title", "Title", form, errors, required=true, maxlength=200,
+                        placeholder="e.g. Clean Code", wide=true) }}
+            {{ ui.field("author", "Author", form, errors, required=true, maxlength=100,
+                        placeholder="e.g. Robert C. Martin", wide=true) }}
+            {{ ui.field("isbn", "ISBN", form, errors, required=true, maxlength=17,
+                        placeholder="e.g. 978-0132350884",
+                        hint="10 or 13 digits. Hyphens and spaces are allowed.") }}
+            {{ ui.field("published_year", "Published Year", form, errors, type="number",
+                        placeholder="e.g. 2008", hint="Optional.") }}
+            {{ ui.field("genre", "Genre", form, errors, maxlength=50,
+                        placeholder="e.g. Programming", hint="Optional.", wide=true) }}
+        </div>
 
         <div class="form-actions">
-            <button type="submit" class="button">Save Book</button>
-            <a class="button button-secondary" href="{{ url_for('index') }}">Cancel</a>
+            <a class="button button-ghost" href="{{ url_for('index') }}">Cancel</a>
+            <button type="submit" class="button">{{ ui.icon("plus") }} Save Book</button>
         </div>
     </form>
 </section>

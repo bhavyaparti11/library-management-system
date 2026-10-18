@@ -1,7 +1,8 @@
 """Library Management System: a small Flask + SQLite web application.
 
-Features: list and search books, add a book, view details, issue a book to a
-borrower, return it, and delete it. A JSON API (/api/books) and a health check
+Features: a dashboard with live statistics, a searchable and filterable book
+catalogue, adding books, viewing details, issuing a book to a borrower,
+returning it, and deleting it. A JSON API (/api/books) and a health check
 (/health) are also provided for automation and monitoring.
 """
 
@@ -25,6 +26,7 @@ from flask import (
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DATABASE = os.path.join(BASE_DIR, "instance", "library.db")
+STATUS_FILTERS = ("all", "available", "issued")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS books (
@@ -102,7 +104,7 @@ def find_book(book_id):
 # ---------------------------------------------------------------------------
 
 def validate_book(form):
-    """Check the add-book form. Returns (cleaned_data, list_of_errors)."""
+    """Check the add-book form. Returns (cleaned_data, {field: error_message})."""
     data = {
         "title": form.get("title", "").strip(),
         "author": form.get("author", "").strip(),
@@ -110,38 +112,40 @@ def validate_book(form):
         "published_year": form.get("published_year", "").strip(),
         "genre": form.get("genre", "").strip(),
     }
-    errors = []
+    errors = {}
 
     if not data["title"]:
-        errors.append("Title is required.")
+        errors["title"] = "Title is required."
     elif len(data["title"]) > 200:
-        errors.append("Title must be 200 characters or fewer.")
+        errors["title"] = "Title must be 200 characters or fewer."
 
     if not data["author"]:
-        errors.append("Author is required.")
+        errors["author"] = "Author is required."
     elif len(data["author"]) > 100:
-        errors.append("Author must be 100 characters or fewer.")
+        errors["author"] = "Author must be 100 characters or fewer."
 
     if not data["isbn"]:
-        errors.append("ISBN is required.")
+        errors["isbn"] = "ISBN is required."
     elif not re.fullmatch(r"\d{9}[\dXx]|\d{13}", data["isbn"]):
-        errors.append("ISBN must contain 10 or 13 digits (hyphens are allowed).")
+        errors["isbn"] = "ISBN must contain 10 or 13 digits (hyphens are allowed)."
     else:
         data["isbn"] = data["isbn"].upper()
 
     if data["published_year"]:
         current_year = datetime.now().year
         if not data["published_year"].isdigit():
-            errors.append("Published year must be a number.")
+            errors["published_year"] = "Published year must be a number."
         elif not 1000 <= int(data["published_year"]) <= current_year:
-            errors.append(f"Published year must be between 1000 and {current_year}.")
+            errors["published_year"] = (
+                f"Published year must be between 1000 and {current_year}."
+            )
         else:
             data["published_year"] = int(data["published_year"])
     else:
         data["published_year"] = None
 
     if len(data["genre"]) > 50:
-        errors.append("Genre must be 50 characters or fewer.")
+        errors["genre"] = "Genre must be 50 characters or fewer."
 
     return data, errors
 
@@ -157,6 +161,10 @@ def create_app(test_config=None):
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-only-not-a-real-secret"),
         DATABASE=os.environ.get("DATABASE_PATH", DEFAULT_DATABASE),
         SEED_SAMPLE_DATA=os.environ.get("SEED_SAMPLE_DATA", "true").lower() == "true",
+        # Set inside the Docker image by GitHub Actions (see Dockerfile), so the
+        # running container can show exactly which image version it is.
+        APP_VERSION=os.environ.get("APP_VERSION", "dev"),
+        BUILD_DATE=os.environ.get("BUILD_DATE", ""),
     )
     if test_config:
         app.config.update(test_config)
@@ -171,31 +179,55 @@ def create_app(test_config=None):
 
 
 def register_routes(app):
+    @app.context_processor
+    def inject_version():
+        """Make the image version available to every template (sidebar/footer)."""
+        return {
+            "app_version": app.config["APP_VERSION"],
+            "build_date": app.config["BUILD_DATE"],
+        }
+
+    @app.template_filter("cover_hue")
+    def cover_hue(text):
+        """Pick a stable colour (0-359) for a book's cover tile from its title."""
+        return sum(ord(char) for char in text or "") * 37 % 360
+
     @app.route("/")
     def index():
         query = request.args.get("q", "").strip()
-        db = get_db()
+        status = request.args.get("status", "all")
+        if status not in STATUS_FILTERS:
+            status = "all"
+
+        conditions, params = [], []
         if query:
             like = f"%{query}%"
-            books = db.execute(
-                "SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? "
-                "ORDER BY title",
-                (like, like, like),
-            ).fetchall()
-        else:
-            books = db.execute("SELECT * FROM books ORDER BY title").fetchall()
+            conditions.append("(title LIKE ? OR author LIKE ? OR isbn LIKE ?)")
+            params += [like, like, like]
+        if status != "all":
+            conditions.append("status = ?")
+            params.append(status)
+
+        sql = "SELECT * FROM books"
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+        db = get_db()
+        books = db.execute(sql + " ORDER BY title", params).fetchall()
 
         stats = db.execute(
             "SELECT COUNT(*) AS total, "
             "COALESCE(SUM(status = 'available'), 0) AS available, "
-            "COALESCE(SUM(status = 'issued'), 0) AS issued FROM books"
+            "COALESCE(SUM(status = 'issued'), 0) AS issued, "
+            "COUNT(DISTINCT genre) AS genres FROM books"
         ).fetchone()
-        return render_template("index.html", books=books, stats=stats, query=query)
+        return render_template(
+            "index.html", books=books, stats=stats, query=query, status=status
+        )
 
     @app.route("/books/add", methods=["GET", "POST"])
     def add_book():
         if request.method == "GET":
-            return render_template("add_book.html", form={}, errors=[])
+            return render_template("add_book.html", form={}, errors={})
 
         data, errors = validate_book(request.form)
         if not errors:
@@ -216,7 +248,7 @@ def register_routes(app):
                 )
                 db.commit()
             except sqlite3.IntegrityError:
-                errors.append("A book with this ISBN already exists.")
+                errors["isbn"] = "A book with this ISBN already exists."
             else:
                 flash(f'"{data["title"]}" was added to the library.', "success")
                 return redirect(url_for("book_detail", book_id=cursor.lastrowid))
@@ -282,7 +314,13 @@ def register_routes(app):
             get_db().execute("SELECT 1").fetchone()
         except sqlite3.Error:
             return jsonify({"status": "error", "database": "unavailable"}), 500
-        return jsonify({"status": "ok", "database": "connected"})
+        return jsonify(
+            {
+                "status": "ok",
+                "database": "connected",
+                "version": app.config["APP_VERSION"],
+            }
+        )
 
     @app.errorhandler(404)
     def page_not_found(error):

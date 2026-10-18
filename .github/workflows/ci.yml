@@ -1,5 +1,12 @@
 # CI/CD pipeline for the Library Management System.
-# Runs automatically on every push and pull request to the main branch.
+#
+#   Job 1  test    install dependencies and run pytest
+#   Job 2  docker  BUILD the image -> TEST the running container -> PUBLISH it to
+#                  GitHub Container Registry (ghcr.io). Publishing happens only for
+#                  pushes to main, and only if every earlier step passed.
+#
+# Your laptop then PULLS the published image and RUNS it with
+# scripts/update-local.ps1 (GitHub cannot reach into your laptop by itself).
 
 name: CI Pipeline
 
@@ -9,6 +16,16 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:  # adds a "Run workflow" button in the Actions tab
+
+# Default: the workflow may only read the repository.
+permissions:
+  contents: read
+
+# If you push twice quickly, the older run on the same branch is cancelled,
+# so an older image can never overwrite a newer "latest".
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -37,21 +54,45 @@ jobs:
         run: pytest
 
   docker:
-    name: Build and test Docker image
+    name: Build, test and publish Docker image
     needs: test  # only runs if all tests passed
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # allows pushing to GitHub Container Registry
 
     steps:
       - name: Check out the code
         uses: actions/checkout@v6
 
-      - name: Build the Docker image
-        run: docker build -t library-app:ci .
+      - name: Work out the image name and version
+        id: meta
+        run: |
+          {
+            # ghcr.io names must be lower case, e.g. ghcr.io/asha/library-management-system
+            echo "image=ghcr.io/${GITHUB_REPOSITORY,,}"
+            # Version = "sha-" + first 7 characters of the commit id, e.g. sha-3f9c2e1
+            echo "version=sha-${GITHUB_SHA::7}"
+            echo "build_date=$(date -u +'%Y-%m-%d %H:%M UTC')"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Start a container from the image
+      - name: "Build: create the Docker image"
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          BUILD_DATE: ${{ steps.meta.outputs.build_date }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          docker build \
+            --build-arg APP_VERSION="$VERSION" \
+            --build-arg BUILD_DATE="$BUILD_DATE" \
+            --label org.opencontainers.image.source="$SOURCE_URL" \
+            --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            -t library-app:ci .
+
+      - name: "Test: start a container from the image"
         run: docker run -d --name library-ci -p 5000:5000 library-app:ci
 
-      - name: Wait for the health check to pass
+      - name: "Test: wait for the health check to pass"
         run: |
           for attempt in $(seq 1 15); do
             if curl -fsS http://localhost:5000/health; then
@@ -65,11 +106,31 @@ jobs:
           echo "Application did not become healthy in time."
           exit 1
 
-      - name: Check that the home page loads
+      - name: "Test: the image reports the expected version"
+        run: curl -fsS http://localhost:5000/health | grep "${{ steps.meta.outputs.version }}"
+
+      - name: "Test: the home page loads"
         run: curl -fsS http://localhost:5000/ | grep "Library Management System"
 
-      - name: Check that the API returns the sample books
+      - name: "Test: the API returns the sample books"
         run: curl -fsS http://localhost:5000/api/books | grep "Clean Code"
+
+      - name: "Test: the add-book and book-detail pages load"
+        run: |
+          curl -fsS http://localhost:5000/books/add | grep "Add a New Book"
+          curl -fsS http://localhost:5000/books/1 | grep "Circulation"
+
+      - name: "Test: unknown pages return 404"
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/books/99999)
+          echo "HTTP status: $code"
+          test "$code" = "404"
+
+      - name: "Test: a book can be added and saved in the database"
+        run: |
+          curl -fsS -o /dev/null -X POST http://localhost:5000/books/add \
+            -d "title=CI Smoke Test Book" -d "author=GitHub Actions" -d "isbn=9780000000002"
+          curl -fsS http://localhost:5000/api/books | grep "CI Smoke Test Book"
 
       - name: Show container logs
         if: always()
@@ -78,3 +139,30 @@ jobs:
       - name: Remove the test container
         if: always()
         run: docker rm -f library-ci || true
+
+      - name: "Publish: log in to GitHub Container Registry"
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # created automatically by GitHub
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: "Publish: push the tested image (version tag + latest)"
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ${{ steps.meta.outputs.image }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          docker tag library-app:ci "$IMAGE:$VERSION"
+          docker tag library-app:ci "$IMAGE:latest"
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:latest"
+          {
+            echo "### Published Docker image"
+            echo ""
+            echo "| Tag | Image |"
+            echo "|-----|-------|"
+            echo "| version | \`$IMAGE:$VERSION\` |"
+            echo "| latest | \`$IMAGE:latest\` |"
+            echo ""
+            echo "On your laptop, run \`.\\scripts\\update-local.ps1\` to pull and run it."
+          } >> "$GITHUB_STEP_SUMMARY"

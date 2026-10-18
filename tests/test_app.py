@@ -42,7 +42,10 @@ def add_book(client, **overrides):
 def test_health_endpoint_reports_ok(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.get_json() == {"status": "ok", "database": "connected"}
+    data = response.get_json()
+    assert data["status"] == "ok"
+    assert data["database"] == "connected"
+    assert data["version"] == "dev"  # default when not running a CI-built image
 
 
 def test_home_page_shows_empty_library(client):
@@ -169,8 +172,8 @@ def test_search_books(client):
     add_book(client, title="Docker in Practice", author="Ian Miell", isbn="9781617297809")
 
     response = client.get("/?q=docker")
-    assert b"<td>Docker in Practice</td>" in response.data
-    assert b"<td>Test Driven Development</td>" not in response.data
+    assert b">Docker in Practice</a>" in response.data
+    assert b">Test Driven Development</a>" not in response.data
 
     response = client.get("/?q=nothing-matches-this")
     assert b"No books match" in response.data
@@ -190,3 +193,55 @@ def test_sample_books_added_when_seeding_enabled(tmp_path):
     app = create_app({"TESTING": True, "DATABASE": str(tmp_path / "seed.db")})
     books = app.test_client().get("/api/books").get_json()
     assert len(books) == 3
+
+
+def test_status_filter_shows_only_matching_books(client):
+    add_book(client)
+    add_book(client, title="Docker in Practice", author="Ian Miell", isbn="9781617297809")
+    client.post("/books/2/issue", data={"borrower": "Asha"})
+
+    response = client.get("/?status=issued")
+    assert b">Docker in Practice</a>" in response.data
+    assert b">Test Driven Development</a>" not in response.data
+
+    response = client.get("/?status=available")
+    assert b">Test Driven Development</a>" in response.data
+    assert b">Docker in Practice</a>" not in response.data
+
+
+def test_unknown_status_filter_shows_all_books(client):
+    add_book(client)
+    response = client.get("/?status=nonsense")
+    assert response.status_code == 200
+    assert b">Test Driven Development</a>" in response.data
+
+
+def test_dashboard_shows_live_counts(client):
+    add_book(client)
+    add_book(client, title="Docker in Practice", author="Ian Miell", isbn="9781617297809")
+    client.post("/books/1/issue", data={"borrower": "Asha"})
+
+    html = client.get("/").get_data(as_text=True)
+    assert '<span class="stat-number">2</span>' in html  # total
+    assert html.count('<span class="stat-number">1</span>') == 2  # available + on loan
+    assert "50% of the collection" in html
+
+
+def test_invalid_field_is_highlighted(client):
+    response = add_book(client, isbn="12345")
+    assert b'aria-invalid="true"' in response.data
+    assert b"The book was not saved." in response.data
+
+
+def test_image_version_is_shown_on_pages_and_health(tmp_path):
+    app = create_app(
+        {
+            "TESTING": True,
+            "DATABASE": str(tmp_path / "version.db"),
+            "SEED_SAMPLE_DATA": False,
+            "APP_VERSION": "sha-abc1234",
+        }
+    )
+    client = app.test_client()
+    assert client.get("/health").get_json()["version"] == "sha-abc1234"
+    assert b"sha-abc1234" in client.get("/").data

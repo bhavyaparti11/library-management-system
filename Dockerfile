@@ -23,6 +23,17 @@ COPY app.py .
 COPY templates/ templates/
 COPY static/ static/
 
+# 5b. Version information. GitHub Actions passes these in with --build-arg, so
+#     the running app can show which image version it is (sidebar and /health).
+#     They come after "pip install" so changing them never re-runs that slow step.
+ARG APP_VERSION=local
+ARG BUILD_DATE=""
+ENV APP_VERSION=${APP_VERSION} \
+    BUILD_DATE=${BUILD_DATE}
+LABEL org.opencontainers.image.title="Library Management System" \
+      org.opencontainers.image.description="Flask + SQLite library app with Docker and CI/CD" \
+      org.opencontainers.image.version="${APP_VERSION}"
+
 # 6. Create a non-root user and a folder for the SQLite database
 RUN useradd --create-home appuser \
     && mkdir -p /app/data \

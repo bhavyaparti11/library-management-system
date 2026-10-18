@@ -1,58 +1,135 @@
 {% extends "base.html" %}
+{% import "macros.html" as ui %}
 
 {% block content %}
-<section class="stats">
-    <div class="stat"><span class="stat-number">{{ stats.total }}</span>Total books</div>
-    <div class="stat"><span class="stat-number">{{ stats.available }}</span>Available</div>
-    <div class="stat"><span class="stat-number">{{ stats.issued }}</span>Issued</div>
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Overview</p>
+        <h1>Library Dashboard</h1>
+        <p class="subtitle">Live figures and catalogue straight from the library database.</p>
+    </div>
+    <a class="button" href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add Book</a>
+</div>
+
+{% set loan_rate = ((stats.issued * 100) / stats.total)|round|int if stats.total else 0 %}
+<section class="stats" aria-label="Library statistics">
+    <a class="stat-card" href="{{ url_for('index') }}#catalogue">
+        <span class="stat-icon tone-blue">{{ ui.icon("book", 22) }}</span>
+        <span class="stat-body">
+            <span class="stat-label">Total books</span>
+            <span class="stat-number">{{ stats.total }}</span>
+            <span class="stat-note">{{ ui.icon("layers", 13) }} {{ stats.genres }} genre{{ "" if stats.genres == 1 else "s" }}</span>
+        </span>
+    </a>
+    <a class="stat-card" href="{{ url_for('index', status='available') }}#catalogue">
+        <span class="stat-icon tone-teal">{{ ui.icon("check", 22) }}</span>
+        <span class="stat-body">
+            <span class="stat-label">Available</span>
+            <span class="stat-number">{{ stats.available }}</span>
+            <span class="stat-note">On the shelf, ready to issue</span>
+        </span>
+    </a>
+    <a class="stat-card" href="{{ url_for('index', status='issued') }}#catalogue">
+        <span class="stat-icon tone-amber">{{ ui.icon("loan", 22) }}</span>
+        <span class="stat-body">
+            <span class="stat-label">On loan</span>
+            <span class="stat-number">{{ stats.issued }}</span>
+            <span class="stat-note">{{ loan_rate }}% of the collection</span>
+            <span class="progress" aria-hidden="true"><span style="width: {{ loan_rate }}%"></span></span>
+        </span>
+    </a>
 </section>
 
-<section class="card">
+<section class="card" id="catalogue">
     <div class="card-header">
-        <h1>Books</h1>
-        <a class="button" href="{{ url_for('add_book') }}">+ Add Book</a>
+        <div>
+            <h2>Book Catalogue</h2>
+            <p class="muted">Showing {{ books|length }} of {{ stats.total }} book{{ "" if stats.total == 1 else "s" }}</p>
+        </div>
     </div>
 
-    <form class="search" method="get" action="{{ url_for('index') }}">
-        <input type="text" name="q" value="{{ query }}"
-               placeholder="Search by title, author or ISBN">
-        <button type="submit" class="button">Search</button>
-        {% if query %}
-            <a class="button button-secondary" href="{{ url_for('index') }}">Clear</a>
+    <div class="toolbar">
+        <form class="search-form" method="get" action="{{ url_for('index') }}#catalogue" role="search">
+            <label class="search-field">
+                {{ ui.icon("search") }}
+                <input type="search" name="q" value="{{ query }}"
+                       placeholder="Search by title, author or ISBN" aria-label="Search books">
+            </label>
+            <input type="hidden" name="status" value="{{ status }}">
+            <button type="submit" class="button">Search</button>
+        </form>
+
+        <nav class="segmented" aria-label="Filter by status">
+            {% for value, label, count in [("all", "All", stats.total),
+                                           ("available", "Available", stats.available),
+                                           ("issued", "On loan", stats.issued)] %}
+                <a class="segment{% if status == value %} active{% endif %}"
+                   href="{{ url_for('index', q=query or none, status=value) }}#catalogue">
+                    {{ label }} <span class="count">{{ count }}</span>
+                </a>
+            {% endfor %}
+        </nav>
+
+        {% if query or status != "all" %}
+            <a class="button button-ghost" href="{{ url_for('index') }}#catalogue">Clear filters</a>
         {% endif %}
-    </form>
+    </div>
 
     {% if books %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Author</th>
-                    <th>ISBN</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for book in books %}
+        <div class="table-wrap">
+            <table class="book-table">
+                <thead>
                     <tr>
-                        <td>{{ book.title }}</td>
-                        <td>{{ book.author }}</td>
-                        <td>{{ book.isbn }}</td>
-                        <td>
-                            <span class="badge badge-{{ book.status }}">{{ book.status }}</span>
-                        </td>
-                        <td>
-                            <a href="{{ url_for('book_detail', book_id=book.id) }}">View</a>
-                        </td>
+                        <th>Book</th>
+                        <th>ISBN</th>
+                        <th>Genre</th>
+                        <th>Year</th>
+                        <th>Status</th>
+                        <th><span class="sr-only">Actions</span></th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% elif query %}
-        <p class="empty">No books match "{{ query }}".</p>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                        <tr>
+                            <td data-label="Book">
+                                <div class="book-cell">
+                                    <span class="cover" style="--hue: {{ book.title|cover_hue }}">{{ book.title[:1]|upper }}</span>
+                                    <span>
+                                        <a class="book-title" href="{{ url_for('book_detail', book_id=book.id) }}">{{ book.title }}</a>
+                                        <span class="book-author">{{ book.author }}</span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-label="ISBN" class="mono">{{ book.isbn }}</td>
+                            <td data-label="Genre">{{ book.genre or "-" }}</td>
+                            <td data-label="Year">{{ book.published_year or "-" }}</td>
+                            <td data-label="Status">
+                                <span class="badge badge-{{ book.status }}">{{ book.status }}</span>
+                            </td>
+                            <td class="row-action">
+                                <a class="link-arrow" href="{{ url_for('book_detail', book_id=book.id) }}">
+                                    View {{ ui.icon("chevron", 16) }}
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elif stats.total == 0 %}
+        <div class="empty-state">
+            <span class="empty-icon">{{ ui.icon("book", 28) }}</span>
+            <h3>No books in the library yet</h3>
+            <p>Add your first book to start building the catalogue.</p>
+            <a class="button" href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add your first book</a>
+        </div>
     {% else %}
-        <p class="empty">No books in the library yet. Click "Add Book" to add one.</p>
+        <div class="empty-state">
+            <span class="empty-icon">{{ ui.icon("inbox", 28) }}</span>
+            <h3>No books match {% if query %}"{{ query }}"{% else %}this filter{% endif %}</h3>
+            <p>Try a different title, author or ISBN, or clear the filters.</p>
+            <a class="button button-ghost" href="{{ url_for('index') }}#catalogue">Clear filters</a>
+        </div>
     {% endif %}
 </section>
 {% endblock %}
