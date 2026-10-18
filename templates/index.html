@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="stats">
+    <div class="stat"><span class="stat-number">{{ stats.total }}</span>Total books</div>
+    <div class="stat"><span class="stat-number">{{ stats.available }}</span>Available</div>
+    <div class="stat"><span class="stat-number">{{ stats.issued }}</span>Issued</div>
+</section>
+
+<section class="card">
+    <div class="card-header">
+        <h1>Books</h1>
+        <a class="button" href="{{ url_for('add_book') }}">+ Add Book</a>
+    </div>
+
+    <form class="search" method="get" action="{{ url_for('index') }}">
+        <input type="text" name="q" value="{{ query }}"
+               placeholder="Search by title, author or ISBN">
+        <button type="submit" class="button">Search</button>
+        {% if query %}
+            <a class="button button-secondary" href="{{ url_for('index') }}">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if books %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>ISBN</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in books %}
+                    <tr>
+                        <td>{{ book.title }}</td>
+                        <td>{{ book.author }}</td>
+                        <td>{{ book.isbn }}</td>
+                        <td>
+                            <span class="badge badge-{{ book.status }}">{{ book.status }}</span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('book_detail', book_id=book.id) }}">View</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% elif query %}
+        <p class="empty">No books match "{{ query }}".</p>
+    {% else %}
+        <p class="empty">No books in the library yet. Click "Add Book" to add one.</p>
+    {% endif %}
+</section>
+{% endblock %}

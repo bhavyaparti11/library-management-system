@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Add Book - Library Management System{% endblock %}
+
+{% block content %}
+<section class="card narrow">
+    <h1>Add a New Book</h1>
+
+    {% if errors %}
+        <div class="alert alert-error">
+            <strong>Please fix the following:</strong>
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('add_book') }}" class="form">
+        <label for="title">Title *</label>
+        <input type="text" id="title" name="title" maxlength="200" required
+               value="{{ form.get('title', '') }}">
+
+        <label for="author">Author *</label>
+        <input type="text" id="author" name="author" maxlength="100" required
+               value="{{ form.get('author', '') }}">
+
+        <label for="isbn">ISBN (10 or 13 digits) *</label>
+        <input type="text" id="isbn" name="isbn" maxlength="17" required
+               value="{{ form.get('isbn', '') }}" placeholder="e.g. 978-0132350884">
+
+        <label for="published_year">Published Year</label>
+        <input type="number" id="published_year" name="published_year" min="1000"
+               value="{{ form.get('published_year', '') }}">
+
+        <label for="genre">Genre</label>
+        <input type="text" id="genre" name="genre" maxlength="50"
+               value="{{ form.get('genre', '') }}">
+
+        <div class="form-actions">
+            <button type="submit" class="button">Save Book</button>
+            <a class="button button-secondary" href="{{ url_for('index') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

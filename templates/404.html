@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - Library Management System{% endblock %}
+
+{% block content %}
+<section class="card narrow">
+    <h1>Page Not Found</h1>
+    <p>The page or book you are looking for does not exist.</p>
+    <p><a class="button" href="{{ url_for('index') }}">Go to all books</a></p>
+</section>
+{% endblock %}

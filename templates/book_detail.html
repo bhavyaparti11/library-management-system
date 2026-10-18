@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} - Library Management System{% endblock %}
+
+{% block content %}
+<section class="card narrow">
+    <h1>{{ book.title }}</h1>
+
+    <dl class="details">
+        <dt>Author</dt>
+        <dd>{{ book.author }}</dd>
+        <dt>ISBN</dt>
+        <dd>{{ book.isbn }}</dd>
+        <dt>Published Year</dt>
+        <dd>{{ book.published_year or "Not specified" }}</dd>
+        <dt>Genre</dt>
+        <dd>{{ book.genre or "Not specified" }}</dd>
+        <dt>Status</dt>
+        <dd><span class="badge badge-{{ book.status }}">{{ book.status }}</span></dd>
+        {% if book.status == "issued" %}
+            <dt>Issued To</dt>
+            <dd>{{ book.borrower }}</dd>
+        {% endif %}
+        <dt>Added On</dt>
+        <dd>{{ book.created_at }}</dd>
+    </dl>
+
+    <div class="actions">
+        {% if book.status == "available" %}
+            <form method="post" class="inline-form"
+                  action="{{ url_for('issue_book', book_id=book.id) }}">
+                <input type="text" name="borrower" maxlength="100" required
+                       placeholder="Borrower name">
+                <button type="submit" class="button">Issue Book</button>
+            </form>
+        {% else %}
+            <form method="post" class="inline-form"
+                  action="{{ url_for('return_book', book_id=book.id) }}">
+                <button type="submit" class="button">Mark as Returned</button>
+            </form>
+        {% endif %}
+
+        <form method="post" class="inline-form"
+              action="{{ url_for('delete_book', book_id=book.id) }}"
+              onsubmit="return confirm('Delete this book permanently?');">
+            <button type="submit" class="button button-danger">Delete Book</button>
+        </form>
+    </div>
+
+    <p><a href="{{ url_for('index') }}">&larr; Back to all books</a></p>
+</section>
+{% endblock %}
