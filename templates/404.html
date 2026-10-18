@@ -5,13 +5,14 @@
 
 {% block content %}
 <section class="card not-found">
+    <img src="{{ url_for('static', filename='img/bunny-search.svg') }}" width="150" height="150" alt="">
     <p class="not-found-code">404</p>
     <h1>Page Not Found</h1>
-    <p class="muted">The page or book you are looking for does not exist. It may have been deleted,
-        or the address may be mistyped.</p>
+    <p class="muted">Oh bother! The bunny searched every shelf, but this page or book does not exist.
+        It may have been deleted, or the address may be mistyped.</p>
     <div class="not-found-actions">
         <a class="button" href="{{ url_for('index') }}">{{ ui.icon("dashboard") }} Go to dashboard</a>
-        <a class="button button-ghost" href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add a book</a>
+        <a class="button button-secondary" href="{{ url_for('add_book') }}">{{ ui.icon("plus") }} Add a book</a>
     </div>
 </section>
 {% endblock %}

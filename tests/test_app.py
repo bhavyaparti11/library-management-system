@@ -245,3 +245,29 @@ def test_image_version_is_shown_on_pages_and_health(tmp_path):
     client = app.test_client()
     assert client.get("/health").get_json()["version"] == "sha-abc1234"
     assert b"sha-abc1234" in client.get("/").data
+
+
+def test_dashboard_shows_recently_added_books(client):
+    add_book(client)
+    add_book(client, title="Docker in Practice", author="Ian Miell", isbn="9781617297809")
+    html = client.get("/").get_data(as_text=True)
+    assert "Freshly added" in html
+    # Newest book first
+    assert html.index("<strong>Docker in Practice</strong>") < html.index(
+        "<strong>Test Driven Development</strong>"
+    )
+
+
+def test_recently_added_is_hidden_while_searching(client):
+    add_book(client)
+    assert b"Freshly added" not in client.get("/?q=test").data
+
+
+def test_bunny_images_are_served(client):
+    html = client.get("/").get_data(as_text=True)
+    for name in ("bunny-logo.svg", "bunny-companion.svg", "bunny-reading.svg"):
+        assert f"img/{name}" in html
+        response = client.get(f"/static/img/{name}")
+        assert response.status_code == 200
+        assert b"<svg" in response.data
+        response.close()

@@ -1,4 +1,13 @@
 // Small progressive enhancements. Every feature still works without JavaScript.
+
+// If the browser restores a page from its back/forward cache, re-enable buttons
+// that were disabled while their form was being sent.
+window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
 document.addEventListener("DOMContentLoaded", () => {
     // Notifications: close button, and success messages fade out after 6 seconds.
     document.querySelectorAll(".toast").forEach((toast) => {
@@ -21,6 +30,18 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!window.confirm(form.dataset.confirm)) {
                 event.preventDefault();
             }
+        });
+    });
+
+    // While a form is being sent, disable its button so it cannot be clicked twice.
+    // (Registered after the confirm handler, so a cancelled delete is not affected.)
+    document.querySelectorAll("button[data-busy-text]").forEach((button) => {
+        button.form.addEventListener("submit", (event) => {
+            if (event.defaultPrevented) {
+                return;
+            }
+            button.disabled = true;
+            button.lastChild.textContent = " " + button.dataset.busyText;
         });
     });
 

@@ -7,7 +7,7 @@
 <div class="page-header">
     <div>
         <a class="back-link" href="{{ url_for('index') }}">{{ ui.icon("arrow-left", 16) }} Back to dashboard</a>
-        <p class="eyebrow">Book details</p>
+        <p class="eyebrow">{{ ui.icon("sparkle", 13) }} Book details</p>
     </div>
 </div>
 
@@ -52,7 +52,7 @@
 
     <aside class="side-stack">
         <section class="card">
-            <h2>Circulation</h2>
+            <h2>{{ ui.icon("heart", 18) }} Circulation</h2>
             {% if book.status == "available" %}
                 <p class="muted">This book is on the shelf and can be issued to a borrower.</p>
                 <form method="post" class="stack-form"
@@ -60,7 +60,7 @@
                     <label for="borrower">Borrower name</label>
                     <input type="text" id="borrower" name="borrower" maxlength="100" required
                            placeholder="e.g. Asha Verma">
-                    <button type="submit" class="button button-block">
+                    <button type="submit" class="button button-block" data-busy-text="Issuing...">
                         {{ ui.icon("arrow-right") }} Issue Book
                     </button>
                 </form>
@@ -71,7 +71,7 @@
                 </div>
                 <form method="post" class="stack-form"
                       action="{{ url_for('return_book', book_id=book.id) }}">
-                    <button type="submit" class="button button-teal button-block">
+                    <button type="submit" class="button button-return button-block" data-busy-text="Returning...">
                         {{ ui.icon("return") }} Mark as Returned
                     </button>
                 </form>
@@ -83,7 +83,7 @@
             <p class="muted">Permanently delete this book from the catalogue. This cannot be undone.</p>
             <form method="post" action="{{ url_for('delete_book', book_id=book.id) }}"
                   data-confirm="Delete &quot;{{ book.title }}&quot; permanently?">
-                <button type="submit" class="button button-danger button-block">
+                <button type="submit" class="button button-danger button-block" data-busy-text="Deleting...">
                     {{ ui.icon("trash") }} Delete Book
                 </button>
             </form>

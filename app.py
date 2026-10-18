@@ -220,8 +220,14 @@ def register_routes(app):
             "COALESCE(SUM(status = 'issued'), 0) AS issued, "
             "COUNT(DISTINCT genre) AS genres FROM books"
         ).fetchone()
+        recent = db.execute("SELECT * FROM books ORDER BY id DESC LIMIT 4").fetchall()
         return render_template(
-            "index.html", books=books, stats=stats, query=query, status=status
+            "index.html",
+            books=books,
+            stats=stats,
+            recent=recent,
+            query=query,
+            status=status,
         )
 
     @app.route("/books/add", methods=["GET", "POST"])

@@ -7,7 +7,8 @@ The laptop then pulls that exact image and runs it.
 
 ## Features
 
-- Dashboard with live counts of total, available and on-loan books
+- "Bunny Library" baby-pink theme with local SVG bunny mascots (`static/img/`), no external images
+- Dashboard with live counts of total, available and on-loan books, plus the 4 most recently added books
 - Book catalogue with search (title, author or ISBN) and status filters
 - Add a book with validation (required fields, ISBN format, year range,
   duplicate ISBN check) and field-by-field error messages
