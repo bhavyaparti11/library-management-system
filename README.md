@@ -1,11 +1,75 @@
-# Library Management System (Docker + GitHub Actions CI/CD)
+# Library Management System
 
-A Flask + SQLite library dashboard, packaged with Docker. A GitHub Actions
-pipeline tests every change, builds a Docker image, smoke-tests the running
-container and publishes the tested image to GitHub Container Registry (GHCR).
-The laptop then pulls that exact image and runs it.
+A simple library dashboard: add books, search the catalogue, issue and return
+books. It runs in Docker, and every change is tested and published
+automatically by a GitHub Actions CI/CD pipeline.
 
-## Features
+---
+
+## Use the Library Management System
+
+### 1. Install Docker Desktop
+
+Download it from https://www.docker.com/products/docker-desktop/, install it and open it.
+Wait until it says **Engine running**.
+
+### 2. Pull the latest image
+
+Open **PowerShell** (Windows) or **Terminal** (Mac) and copy-paste:
+
+```bash
+docker pull ghcr.io/bhavyaparti11/library-management-system:latest
+```
+
+### 3. Start it
+
+```bash
+docker run -d --name library-app --restart unless-stopped -p 127.0.0.1:5000:5000 -v library-data:/app/data ghcr.io/bhavyaparti11/library-management-system:latest
+```
+
+Open **http://localhost:5000** in your browser. Three sample books are already there.
+
+### 4. Use it
+
+- **Dashboard**: total, available and on-loan books, plus the newest additions.
+- **Add a book**: fill in title, author and ISBN. Wrong input shows a clear error.
+- **Catalogue**: search by title, author or ISBN, or filter by status.
+- **Book page**: issue the book, return it, or delete it.
+
+The version you are running (for example `sha-3f9c2e1`) is shown in the sidebar.
+
+### Everyday commands
+
+| I want to… | Command |
+|---|---|
+| Stop the app | `docker stop library-app` |
+| Start it again | `docker start library-app` |
+| Check it is healthy | open http://localhost:5000/health |
+| See the logs | `docker logs -f library-app` |
+| Get the newest version | `docker pull ghcr.io/bhavyaparti11/library-management-system:latest`, then `docker rm -f library-app`, then the `docker run` command from step 3 |
+
+Your books are kept in the `library-data` volume, so stopping, removing or
+updating the container never loses them.
+
+> ⚠️ Never run `docker volume rm library-data`. That deletes all your books.
+
+**Page won't open?** Make sure Docker Desktop says *Engine running*, then run
+`docker start library-app`. If port 5000 is busy, change `127.0.0.1:5000:5000`
+to `127.0.0.1:5050:5000` and open http://localhost:5050.
+
+---
+
+## For developers
+
+```bash
+git clone https://github.com/bhavyaparti11/library-management-system.git
+cd library-management-system
+```
+
+On Windows, `.\scripts\update-local.ps1` does the pull-and-run steps above for
+you, with a health check and automatic rollback (see *Run It* below).
+
+### Features
 
 - Clean, professional dashboard design with baby-pink accents and a local SVG logo (`static/img/logo.svg`)
 - Dashboard with live counts of total, available and on-loan books, plus the 4 most recently added books
@@ -17,7 +81,7 @@ The laptop then pulls that exact image and runs it.
 - JSON API at `/api/books` and a health check at `/health`
 - The running version (for example `sha-3f9c2e1`) is shown in the sidebar and in `/health`
 
-## Technology Stack
+### Technology Stack
 
 | Purpose            | Technology                               |
 |--------------------|------------------------------------------|
@@ -30,7 +94,7 @@ The laptop then pulls that exact image and runs it.
 | CI/CD              | GitHub Actions                           |
 | Image registry     | GitHub Container Registry (ghcr.io)      |
 
-## How the Automation Works
+### How the Automation Works
 
 ```mermaid
 flowchart LR
@@ -55,7 +119,7 @@ GitHub Actions runs on GitHub's computers. It cannot change the containers on
 your laptop. `scripts/update-local.ps1` is the step that brings the published
 image to your laptop.
 
-## Run It (Windows PowerShell)
+### Run It (Windows PowerShell)
 
 Allow local scripts once (current user only):
 
@@ -63,7 +127,7 @@ Allow local scripts once (current user only):
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-### Option 1: Run the latest tested image from GitHub
+#### Option 1: Run the latest tested image from GitHub
 
 ```powershell
 .\scripts\update-local.ps1                     # pull the newest published image and run it
@@ -74,7 +138,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 The swap is safe: the old container is stopped and kept aside until the new one
 passes its `/health` check. If the new one fails, the old one is restored.
 
-### Option 2: Development mode (see code changes instantly)
+#### Option 2: Development mode (see code changes instantly)
 
 ```powershell
 .\scripts\dev.ps1          # start, then edit files and refresh the browser
@@ -94,7 +158,7 @@ reloads automatically, so you do not need to rebuild the image.
 because only one container can use port 5000. After `.\scripts\dev.ps1 -Stop`,
 bring it back with `docker start library-app`.
 
-### Option 3: Build the image from your local code
+#### Option 3: Build the image from your local code
 
 ```powershell
 .\scripts\update-local.ps1 -Build
@@ -104,7 +168,7 @@ All three options use the same `library-data` volume, so your books are kept.
 Only one runs at a time on http://localhost:5000, and the scripts switch
 between them for you.
 
-## Run Without Docker
+### Run Without Docker
 
 ```powershell
 python -m venv .venv
@@ -114,7 +178,7 @@ python app.py      # http://127.0.0.1:5000
 pytest             # run the automated tests
 ```
 
-## Useful Docker Commands
+### Useful Docker Commands
 
 ```powershell
 docker ps                                 # running containers
@@ -126,7 +190,7 @@ docker cp library-app:/app/data/library.db .\library-backup.db   # backup
 
 Never run `docker volume rm library-data` unless you want to delete all books.
 
-## CI/CD Pipeline
+### CI/CD Pipeline
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`, and
 on demand from the **Actions** tab.
@@ -144,7 +208,7 @@ After the first publish, open your GitHub profile > **Packages** >
 `library-management-system` > **Package settings** > **Change visibility** > **Public**
 so the laptop can pull it without logging in.
 
-## Environment Variables
+### Environment Variables
 
 | Variable           | Default                | Purpose                                   |
 |--------------------|------------------------|-------------------------------------------|
